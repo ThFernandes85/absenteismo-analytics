@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.local
+
+# Contém credenciais reais (senha do primeiro Admin Master em texto puro) —
+# nunca deve ir para o repositório. Use os arquivos em supabase/migrations/
+# como referência reutilizável; este é só um script pessoal de setup.
+supabase/setup-completo.sql
+
+# Config local do Claude Code (específica desta máquina/sessão)
+.claude/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
