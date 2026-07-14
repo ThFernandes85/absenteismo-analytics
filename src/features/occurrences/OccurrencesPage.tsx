@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
@@ -7,16 +8,31 @@ import { FullPageSpinner } from '@/components/ui/Spinner'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { OCCURRENCE_COLORS, OCCURRENCE_ICONS, OCCURRENCE_LABELS } from '@/lib/constants'
 import { useEmployees } from '@/features/employees/api'
-import { useDeleteOccurrence, useOccurrencesByDateRange } from './api'
+import { PendingAttendanceCard } from '@/features/dashboard/PendingAttendanceCard'
+import { useActiveLeaveToday, useDeleteOccurrence, useOccurrencesByDateRange } from './api'
 import { OccurrenceForm } from './OccurrenceForm'
 import { AttachmentList } from './AttachmentList'
 
 export function OccurrencesPage() {
-  const { data: employees, isLoading: loadingEmployees } = useEmployees('ativo')
+  const { data: allEmployees, isLoading: loadingEmployees } = useEmployees('all')
+  const employees = allEmployees?.filter((e) => e.status !== 'inativo')
   const startDate = dayjs().subtract(30, 'day').format('YYYY-MM-DD')
   const endDate = dayjs().format('YYYY-MM-DD')
+  const today = endDate
   const { data: recentOccurrences, isLoading: loadingOccurrences } = useOccurrencesByDateRange(startDate, endDate)
+  const { data: activeLeaveToday } = useActiveLeaveToday()
   const deleteOccurrence = useDeleteOccurrence()
+  const [prefillEmployeeId, setPrefillEmployeeId] = useState<string>()
+
+  const pendingEmployees = useMemo(() => {
+    const loggedTodayIds = new Set(
+      (recentOccurrences ?? []).filter((o) => o.occurrence_date === today).map((o) => o.employee_id),
+    )
+    const onLeaveIds = new Set((activeLeaveToday ?? []).map((o) => o.employee_id))
+    return (allEmployees ?? []).filter(
+      (e) => e.status === 'ativo' && !loggedTodayIds.has(e.id) && !onLeaveIds.has(e.id),
+    )
+  }, [allEmployees, recentOccurrences, activeLeaveToday, today])
 
   async function handleDelete(id: string) {
     if (!confirm('Remover este lançamento?')) return
@@ -39,13 +55,18 @@ export function OccurrencesPage() {
         </p>
       </div>
 
+      <PendingAttendanceCard
+        pendingEmployees={pendingEmployees}
+        onSelectEmployee={(e) => setPrefillEmployeeId(e.id)}
+      />
+
       <div className="grid grid-cols-3 gap-6">
         <Card className="col-span-1 h-fit">
           <CardHeader>
             <CardTitle>Novo Lançamento</CardTitle>
           </CardHeader>
           <CardContent>
-            <OccurrenceForm employees={employees ?? []} />
+            <OccurrenceForm employees={employees ?? []} prefillEmployeeId={prefillEmployeeId} />
           </CardContent>
         </Card>
 

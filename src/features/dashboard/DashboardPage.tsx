@@ -24,9 +24,10 @@ import { ExportMenu } from '@/components/ui/ExportMenu'
 import { CHART_PALETTE, OCCURRENCE_LABELS } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import { useCostCenters, useEmployees } from '@/features/employees/api'
-import { useOccurrencesByDate, useOccurrencesByDateRange } from '@/features/occurrences/api'
+import { useActiveLeaveToday, useOccurrencesByDate, useOccurrencesByDateRange } from '@/features/occurrences/api'
 import { KpiCard } from './KpiCard'
 import { HoursImpactCard } from './HoursImpactCard'
+import { PendingAttendanceCard } from './PendingAttendanceCard'
 import { PeriodFilter } from './PeriodFilter'
 import { resolvePeriod, type PeriodPreset } from './periods'
 import {
@@ -50,6 +51,7 @@ export function DashboardPage() {
   const { data: allActiveEmployees, isLoading: loadingEmployees } = useEmployees('ativo')
   const { data: allTodayOccurrences, isLoading: loadingToday } = useOccurrencesByDate(today)
   const { data: allPeriodOccurrences, isLoading: loadingPeriod } = useOccurrencesByDateRange(start, end)
+  const { data: activeLeaveToday } = useActiveLeaveToday()
 
   const activeEmployees = useMemo(
     () =>
@@ -72,6 +74,12 @@ export function DashboardPage() {
         : allPeriodOccurrences?.filter((o) => o.employees.cost_center_id === costCenterFilter),
     [allPeriodOccurrences, costCenterFilter],
   )
+
+  const pendingEmployees = useMemo(() => {
+    const loggedTodayIds = new Set((allTodayOccurrences ?? []).map((o) => o.employee_id))
+    const onLeaveIds = new Set((activeLeaveToday ?? []).map((o) => o.employee_id))
+    return (activeEmployees ?? []).filter((e) => !loggedTodayIds.has(e.id) && !onLeaveIds.has(e.id))
+  }, [activeEmployees, allTodayOccurrences, activeLeaveToday])
 
   const todayCounts = useMemo(() => {
     const counts = { presenca: 0, falta: 0, atestado: 0, declaracao: 0, hora_extra: 0, ferias: 0 }
@@ -138,6 +146,8 @@ export function DashboardPage() {
         <KpiCard icon={Clock} label="Horas Extras Hoje" value={todayCounts.hora_extra} colorClass="bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400" />
         <KpiCard icon={Palmtree} label="De Férias Hoje" value={todayCounts.ferias} colorClass="bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400" />
       </div>
+
+      <PendingAttendanceCard pendingEmployees={pendingEmployees} />
 
       <Card>
         <CardContent className="space-y-4">

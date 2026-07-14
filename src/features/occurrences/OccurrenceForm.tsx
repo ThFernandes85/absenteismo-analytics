@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Combobox } from '@/components/ui/Combobox'
 import { OCCURRENCE_LABELS } from '@/lib/constants'
+import { supabase } from '@/lib/supabase'
 import { useCreateOccurrence, useUploadAttachment } from './api'
 import type { Employee, OccurrenceType } from '@/types/database.types'
 
@@ -59,7 +60,13 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>
 
-export function OccurrenceForm({ employees }: { employees: Employee[] }) {
+export function OccurrenceForm({
+  employees,
+  prefillEmployeeId,
+}: {
+  employees: Employee[]
+  prefillEmployeeId?: string
+}) {
   const createOccurrence = useCreateOccurrence()
   const uploadAttachment = useUploadAttachment()
   const [file, setFile] = useState<File | null>(null)
@@ -85,6 +92,34 @@ export function OccurrenceForm({ employees }: { employees: Employee[] }) {
   const employeeId = watch('employee_id')
   const occurrenceDate = watch('occurrence_date')
   const endDate = watch('end_date')
+
+  useEffect(() => {
+    if (prefillEmployeeId) setValue('employee_id', prefillEmployeeId, { shouldValidate: true })
+  }, [prefillEmployeeId, setValue])
+
+  const selectedEmployee = employees.find((e) => e.id === employeeId)
+
+  async function describeConflict(employeeIdArg: string, date: string): Promise<string> {
+    const employee = employees.find((e) => e.id === employeeIdArg)
+    if (employee?.status === 'afastado') return 'Colaborador encontra-se afastado.'
+
+    const { data } = await supabase
+      .from('occurrences')
+      .select('type, end_date')
+      .eq('employee_id', employeeIdArg)
+      .in('type', ['ferias', 'atestado'])
+      .lte('occurrence_date', date)
+      .or(`end_date.is.null,end_date.gt.${date}`)
+      .limit(1)
+      .maybeSingle()
+
+    if (data) {
+      const label = data.type === 'ferias' ? 'de férias' : 'de atestado'
+      const retorno = data.end_date ? ` (retorno em ${dayjs(data.end_date).format('DD/MM/YYYY')})` : ''
+      return `Colaborador encontra-se ${label}${retorno}.`
+    }
+    return 'Este funcionário já possui um lançamento nesse período.'
+  }
 
   const isRangeType = RANGE_TYPES.includes(type)
   const rangeDays =
@@ -130,7 +165,7 @@ export function OccurrenceForm({ employees }: { employees: Employee[] }) {
     } catch (err) {
       const message = err instanceof Error ? err.message : ''
       if (message.includes('occurrences_no_overlap') || message.includes('exclusion') || message.includes('duplicate')) {
-        toast.error('Este funcionário já possui um lançamento nesse período (ou está de férias/atestado).')
+        toast.error(await describeConflict(values.employee_id, values.occurrence_date))
       } else {
         toast.error('Erro ao lançar ocorrência.')
       }
@@ -154,6 +189,11 @@ export function OccurrenceForm({ employees }: { employees: Employee[] }) {
           placeholder="Selecione o funcionário…"
         />
         <FieldError message={errors.employee_id?.message} />
+        {selectedEmployee?.status === 'afastado' && (
+          <p className="mt-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+            ⚠️ Este colaborador está afastado.
+          </p>
+        )}
       </div>
 
       <div>

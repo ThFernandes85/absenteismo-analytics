@@ -11,7 +11,7 @@ import { ExportMenu } from '@/components/ui/ExportMenu'
 import { formatDate } from '@/lib/utils'
 import { EMPLOYEE_STATUS_COLORS, EMPLOYEE_STATUS_LABELS, OCCURRENCE_COLORS, OCCURRENCE_LABELS } from '@/lib/constants'
 import { useActiveLeaveToday } from '@/features/occurrences/api'
-import { useEmployees, useSetEmployeeStatus } from './api'
+import { useCostCenters, useEmployees, useSetEmployeeStatus } from './api'
 import { EmployeeFormModal } from './EmployeeFormModal'
 import type { Employee } from '@/types/database.types'
 
@@ -19,6 +19,7 @@ type StatusFilter = 'ativo_afastado' | 'ativo' | 'afastado' | 'inativo' | 'all'
 
 export function EmployeesPage() {
   const { data: employees, isLoading } = useEmployees('all')
+  const { data: costCenters } = useCostCenters()
   const { data: activeLeave } = useActiveLeaveToday()
   const setStatus = useSetEmployeeStatus()
 
@@ -30,6 +31,7 @@ export function EmployeesPage() {
   const [search, setSearch] = useState('')
   const [positionFilter, setPositionFilter] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState('')
+  const [costCenterFilter, setCostCenterFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ativo_afastado')
   const [formOpen, setFormOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
@@ -52,12 +54,13 @@ export function EmployeesPage() {
       })
       .filter((e) => !positionFilter || e.position === positionFilter)
       .filter((e) => !departmentFilter || e.department === departmentFilter)
+      .filter((e) => !costCenterFilter || e.cost_center_id === costCenterFilter)
       .filter((e) => {
         const q = search.trim().toLowerCase()
         if (!q) return true
         return e.full_name.toLowerCase().includes(q) || e.registration_number.toLowerCase().includes(q)
       })
-  }, [employees, statusFilter, positionFilter, departmentFilter, search])
+  }, [employees, statusFilter, positionFilter, departmentFilter, costCenterFilter, search])
 
   const activeCount = employees?.filter((e) => e.status === 'ativo').length ?? 0
   const awayCount = employees?.filter((e) => e.status === 'afastado').length ?? 0
@@ -190,6 +193,14 @@ export function EmployeesPage() {
             {positions.map((p) => (
               <option key={p} value={p}>
                 {p}
+              </option>
+            ))}
+          </Select>
+          <Select className="w-48" value={costCenterFilter} onChange={(e) => setCostCenterFilter(e.target.value)}>
+            <option value="">Todos os centros de lucro</option>
+            {costCenters?.map((cc) => (
+              <option key={cc.id} value={cc.id}>
+                {cc.code} — {cc.name}
               </option>
             ))}
           </Select>
