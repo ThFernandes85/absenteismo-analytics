@@ -140,7 +140,7 @@ export function ExecutiveDashboardPage() {
     <div style={EXEC_THEME} className="-m-6 min-h-[calc(100vh-3.5rem)] bg-[var(--exec-bg)] pb-12 font-[Inter,system-ui,sans-serif]">
       <div className="flex items-center justify-between border-b border-[var(--exec-border)] bg-[var(--exec-card)] px-10 py-5">
         <div className="flex items-center gap-3.5">
-          <img src="/sodexo-logo.png" alt="Sodexo" className="h-7 w-auto" />
+          <img src={`${import.meta.env.BASE_URL}sodexo-logo.png`} alt="Sodexo" className="h-7 w-auto" />
           <div className="h-8 w-px bg-[var(--exec-border)]" />
           <div>
             <div className="text-[15px] font-bold text-[var(--exec-text)]">People Analytics</div>
