@@ -46,6 +46,7 @@ export function HiddenEmployeesPage() {
               <th className="px-4 py-2.5 font-medium">Cargo</th>
               <th className="px-4 py-2.5 font-medium">Setor</th>
               <th className="px-4 py-2.5 font-medium">Admissão</th>
+              <th className="px-4 py-2.5 font-medium">Motivo da desativação</th>
               <th className="px-4 py-2.5 font-medium" />
             </tr>
           </thead>
@@ -57,6 +58,9 @@ export function HiddenEmployeesPage() {
                 <td className="px-4 py-2.5">{employee.position}</td>
                 <td className="px-4 py-2.5">{employee.department}</td>
                 <td className="px-4 py-2.5">{formatDate(employee.admission_date)}</td>
+                <td className="px-4 py-2.5 max-w-64 text-[var(--color-text-muted)]">
+                  {employee.deactivation_reason || '—'}
+                </td>
                 <td className="px-4 py-2.5 text-right">
                   <Button size="sm" variant="secondary" onClick={() => handleReactivate(employee.id, employee.full_name)}>
                     <RotateCcw className="h-3.5 w-3.5" /> Reativar
@@ -66,7 +70,7 @@ export function HiddenEmployeesPage() {
             ))}
             {employees?.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-[var(--color-text-muted)]">
+                <td colSpan={7} className="px-4 py-8 text-center text-[var(--color-text-muted)]">
                   Nenhum funcionário oculto.
                 </td>
               </tr>

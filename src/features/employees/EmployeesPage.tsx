@@ -13,6 +13,7 @@ import { EMPLOYEE_STATUS_COLORS, EMPLOYEE_STATUS_LABELS, OCCURRENCE_COLORS, OCCU
 import { useActiveLeaveToday } from '@/features/occurrences/api'
 import { useCostCenters, useEmployees, useSetEmployeeStatus } from './api'
 import { EmployeeFormModal } from './EmployeeFormModal'
+import { DeactivateEmployeeModal } from './DeactivateEmployeeModal'
 import type { Employee } from '@/types/database.types'
 
 type StatusFilter = 'ativo_afastado' | 'ativo' | 'afastado' | 'inativo' | 'all'
@@ -35,6 +36,7 @@ export function EmployeesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ativo_afastado')
   const [formOpen, setFormOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
+  const [deactivatingEmployee, setDeactivatingEmployee] = useState<Employee | null>(null)
 
   const positions = useMemo(
     () => Array.from(new Set(employees?.map((e) => e.position) ?? [])).sort(),
@@ -295,17 +297,7 @@ export function EmployeesPage() {
                       </Button>
                     )}
                     {(employee.status === 'ativo' || employee.status === 'afastado') && (
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() =>
-                          handleSetStatus(
-                            employee,
-                            'inativo',
-                            `Desativar ${employee.full_name}? O funcionário será movido para "Funcionários Ocultos".`,
-                          )
-                        }
-                      >
+                      <Button size="sm" variant="danger" onClick={() => setDeactivatingEmployee(employee)}>
                         Desativar
                       </Button>
                     )}
@@ -325,6 +317,11 @@ export function EmployeesPage() {
       </Card>
 
       <EmployeeFormModal open={formOpen} onClose={() => setFormOpen(false)} employee={editingEmployee} />
+      <DeactivateEmployeeModal
+        open={!!deactivatingEmployee}
+        onClose={() => setDeactivatingEmployee(null)}
+        employee={deactivatingEmployee}
+      />
     </div>
   )
 }

@@ -31,6 +31,7 @@ export interface Employee {
   admission_date: string
   status: EmployeeStatus
   notes: string | null
+  deactivation_reason: string | null
   created_by: string | null
   updated_by: string | null
   created_at: string

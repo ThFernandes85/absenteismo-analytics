@@ -91,10 +91,22 @@ export function useSetEmployeeStatus() {
   const queryClient = useQueryClient()
   const { profile } = useAuth()
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: EmployeeStatus }) => {
+    mutationFn: async ({
+      id,
+      status,
+      deactivationReason,
+    }: {
+      id: string
+      status: EmployeeStatus
+      deactivationReason?: string
+    }) => {
       const { error } = await supabase
         .from('employees')
-        .update({ status, updated_by: profile?.id })
+        .update({
+          status,
+          updated_by: profile?.id,
+          deactivation_reason: status === 'inativo' ? (deactivationReason ?? null) : null,
+        })
         .eq('id', id)
       if (error) throw error
     },
