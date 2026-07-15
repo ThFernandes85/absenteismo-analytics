@@ -76,12 +76,14 @@ export function useActiveLeaveToday() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('occurrences')
-        .select('employee_id, type, occurrence_date, end_date')
+        .select('employee_id, type, occurrence_date, end_date, employees(cost_center_id)')
         .in('type', ['ferias', 'atestado'])
         .lte('occurrence_date', today)
         .gt('end_date', today)
       if (error) throw error
-      return data as Pick<Occurrence, 'employee_id' | 'type' | 'occurrence_date' | 'end_date'>[]
+      return data as unknown as (Pick<Occurrence, 'employee_id' | 'type' | 'occurrence_date' | 'end_date'> & {
+        employees: { cost_center_id: string }
+      })[]
     },
   })
 }

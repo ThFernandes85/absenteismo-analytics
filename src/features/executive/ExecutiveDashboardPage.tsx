@@ -115,9 +115,11 @@ export function ExecutiveDashboardPage() {
   const today = dayjs().format('YYYY-MM-DD')
   const ausentesHoje = allOccurrences.filter(
     (o) =>
-      o.occurrence_date === today &&
-      (o.type === 'falta' || o.type === 'atestado') &&
-      (selectedCostCenter === 'todos' || o.employees.cost_center_id === selectedCostCenter),
+      (selectedCostCenter === 'todos' || o.employees.cost_center_id === selectedCostCenter) &&
+      // falta é sempre um único dia; atestado/férias são períodos, então
+      // "hoje" pode cair em qualquer ponto entre occurrence_date e end_date.
+      ((o.type === 'falta' && o.occurrence_date === today) ||
+        (o.type === 'atestado' && o.occurrence_date <= today && (!o.end_date || o.end_date > today))),
   ).length
 
   const custoEstimado = diasPerdidos * averageDailyCost

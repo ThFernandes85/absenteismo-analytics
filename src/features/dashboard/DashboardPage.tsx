@@ -89,6 +89,20 @@ export function DashboardPage() {
     return counts
   }, [todayOccurrences])
 
+  // Férias e atestado são períodos: alguém pode estar "de férias hoje" mesmo
+  // que o lançamento tenha ocorrence_date de um dia anterior. Por isso esses
+  // dois contadores vêm de activeLeaveToday (que checa o período inteiro),
+  // não de todayCounts (que só olha ocorrências com data exatamente hoje).
+  const activeLeaveCounts = useMemo(() => {
+    const counts = { ferias: 0, atestado: 0 }
+    ;(activeLeaveToday ?? [])
+      .filter((o) => costCenterFilter === 'all' || o.employees.cost_center_id === costCenterFilter)
+      .forEach((o) => {
+        counts[o.type as 'ferias' | 'atestado'] += 1
+      })
+    return counts
+  }, [activeLeaveToday, costCenterFilter])
+
   const lostHours = useMemo(() => calculateLostHours(periodOccurrences ?? []), [periodOccurrences])
   const overtimeHours = useMemo(() => calculateOvertimeHours(periodOccurrences ?? []), [periodOccurrences])
   const byDepartment = useMemo(() => groupByDimension(periodOccurrences ?? [], 'department'), [periodOccurrences])
@@ -141,10 +155,10 @@ export function DashboardPage() {
         <KpiCard icon={Users} label="Ativos" value={activeEmployees?.length ?? 0} colorClass="bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400" />
         <KpiCard icon={UserCheck} label="Presentes Hoje" value={todayCounts.presenca} colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" />
         <KpiCard icon={UserX} label="Faltas Hoje" value={todayCounts.falta} colorClass="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400" />
-        <KpiCard icon={Stethoscope} label="Atestados Hoje" value={todayCounts.atestado} colorClass="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400" />
+        <KpiCard icon={Stethoscope} label="Atestados Hoje" value={activeLeaveCounts.atestado} colorClass="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400" />
         <KpiCard icon={FileText} label="Declarações Hoje" value={todayCounts.declaracao} colorClass="bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400" />
         <KpiCard icon={Clock} label="Horas Extras Hoje" value={todayCounts.hora_extra} colorClass="bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400" />
-        <KpiCard icon={Palmtree} label="De Férias Hoje" value={todayCounts.ferias} colorClass="bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400" />
+        <KpiCard icon={Palmtree} label="De Férias Hoje" value={activeLeaveCounts.ferias} colorClass="bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400" />
       </div>
 
       <PendingAttendanceCard pendingEmployees={pendingEmployees} />
