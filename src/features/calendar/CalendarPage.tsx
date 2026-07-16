@@ -24,14 +24,36 @@ export function CalendarPage() {
   )
 
   const occurrencesByDay = useMemo(() => {
-    const map = new Map<string, typeof occurrences>()
-    occurrences?.forEach((o) => {
-      const list = map.get(o.occurrence_date) ?? []
+    const map = new Map<string, NonNullable<typeof occurrences>>()
+    const gridStartStr = gridStart.format('YYYY-MM-DD')
+    const gridEndStr = gridEnd.format('YYYY-MM-DD')
+
+    const addToDay = (key: string, o: NonNullable<typeof occurrences>[number]) => {
+      const list = map.get(key) ?? []
       list.push(o)
-      map.set(o.occurrence_date, list)
+      map.set(key, list)
+    }
+
+    occurrences?.forEach((o) => {
+      // Férias/atestado são períodos: aparecem em todos os dias que
+      // cobrem dentro da grade visível, não só no dia de início.
+      if ((o.type !== 'ferias' && o.type !== 'atestado') || !o.end_date) {
+        addToDay(o.occurrence_date, o)
+        return
+      }
+      const lastCoveredDay = dayjs(o.end_date).subtract(1, 'day').format('YYYY-MM-DD')
+      const start = o.occurrence_date > gridStartStr ? o.occurrence_date : gridStartStr
+      const end = lastCoveredDay < gridEndStr ? lastCoveredDay : gridEndStr
+      if (start > end) return
+      let cursor = dayjs(start)
+      const last = dayjs(end)
+      while (!cursor.isAfter(last, 'day')) {
+        addToDay(cursor.format('YYYY-MM-DD'), o)
+        cursor = cursor.add(1, 'day')
+      }
     })
     return map
-  }, [occurrences])
+  }, [occurrences, gridStart, gridEnd])
 
   const days: Dayjs[] = []
   let cursor = gridStart
