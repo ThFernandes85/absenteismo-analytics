@@ -40,11 +40,15 @@ export function useOccurrencesByDateRange(startDate: string, endDate: string) {
   return useQuery({
     queryKey: [...OCCURRENCES_KEY, 'range', startDate, endDate],
     queryFn: async () => {
+      // Tipos sem período (end_date nulo) precisam de occurrence_date dentro
+      // do intervalo; férias/atestado (com período) só precisam que o
+      // período se sobreponha ao intervalo — senão um atestado que começou
+      // antes do início do filtro, mas ainda está em curso, desaparecia.
       const { data, error } = await supabase
         .from('occurrences')
         .select('*, employees(full_name, department, position, cost_center_id)')
-        .gte('occurrence_date', startDate)
         .lte('occurrence_date', endDate)
+        .or(`end_date.gt.${startDate},and(end_date.is.null,occurrence_date.gte.${startDate})`)
         .order('occurrence_date', { ascending: false })
       if (error) throw error
       return data as (Occurrence & {

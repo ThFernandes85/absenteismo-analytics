@@ -103,17 +103,23 @@ export function DashboardPage() {
     return counts
   }, [activeLeaveToday, costCenterFilter])
 
-  const lostHours = useMemo(() => calculateLostHours(periodOccurrences ?? []), [periodOccurrences])
+  const lostHours = useMemo(() => calculateLostHours(periodOccurrences ?? [], start, end), [periodOccurrences, start, end])
   const overtimeHours = useMemo(() => calculateOvertimeHours(periodOccurrences ?? []), [periodOccurrences])
-  const byDepartment = useMemo(() => groupByDimension(periodOccurrences ?? [], 'department'), [periodOccurrences])
-  const byPosition = useMemo(() => groupByDimension(periodOccurrences ?? [], 'position'), [periodOccurrences])
+  const byDepartment = useMemo(
+    () => groupByDimension(periodOccurrences ?? [], 'department', start, end),
+    [periodOccurrences, start, end],
+  )
+  const byPosition = useMemo(
+    () => groupByDimension(periodOccurrences ?? [], 'position', start, end),
+    [periodOccurrences, start, end],
+  )
   const byEmployee = useMemo(
-    () => groupByDimension(periodOccurrences ?? [], 'full_name').slice(0, 10),
-    [periodOccurrences],
+    () => groupByDimension(periodOccurrences ?? [], 'full_name', start, end).slice(0, 10),
+    [periodOccurrences, start, end],
   )
   const byCostCenter = useMemo(
-    () => groupByCostCenter(allPeriodOccurrences ?? [], costCenters ?? []),
-    [allPeriodOccurrences, costCenters],
+    () => groupByCostCenter(allPeriodOccurrences ?? [], costCenters ?? [], start, end),
+    [allPeriodOccurrences, costCenters, start, end],
   )
   const byType = useMemo(() => groupByType(periodOccurrences ?? []), [periodOccurrences])
   const overTime = useMemo(() => groupOverTime(periodOccurrences ?? [], start, end), [periodOccurrences, start, end])

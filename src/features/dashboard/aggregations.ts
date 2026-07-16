@@ -8,10 +8,32 @@ type OccurrenceWithEmployee = Occurrence & {
 
 const ABSENCE_TYPES: OccurrenceType[] = ['falta', 'atestado']
 
-export function calculateLostHours(occurrences: Occurrence[]) {
+// Dias de uma ocorrência (occurrence_date até end_date, exclusivo — ou só
+// occurrence_date para tipos sem período) que caem dentro de [rangeStart,
+// rangeEnd]. Datas são strings 'YYYY-MM-DD', então comparação lexicográfica
+// já funciona corretamente sem precisar de plugins do dayjs.
+function overlappingDays(occurrenceDate: string, endDate: string | null, rangeStart: string, rangeEnd: string) {
+  const lastCoveredDay = endDate ? dayjs(endDate).subtract(1, 'day').format('YYYY-MM-DD') : occurrenceDate
+  const start = occurrenceDate > rangeStart ? occurrenceDate : rangeStart
+  const end = lastCoveredDay < rangeEnd ? lastCoveredDay : rangeEnd
+  if (start > end) return []
+
+  const days: string[] = []
+  let cursor = dayjs(start)
+  const last = dayjs(end)
+  while (!cursor.isAfter(last, 'day')) {
+    days.push(cursor.format('YYYY-MM-DD'))
+    cursor = cursor.add(1, 'day')
+  }
+  return days
+}
+
+export function calculateLostHours(occurrences: Occurrence[], rangeStart: string, rangeEnd: string) {
   return occurrences.reduce((total, o) => {
     if (o.type === 'falta') return total + STANDARD_WORKDAY_HOURS
-    if (o.type === 'atestado') return total + (o.days_count ?? 0) * STANDARD_WORKDAY_HOURS
+    if (o.type === 'atestado') {
+      return total + overlappingDays(o.occurrence_date, o.end_date, rangeStart, rangeEnd).length * STANDARD_WORKDAY_HOURS
+    }
     return total
   }, 0)
 }
@@ -23,26 +45,37 @@ export function calculateOvertimeHours(occurrences: Occurrence[]) {
 export function groupByDimension(
   occurrences: OccurrenceWithEmployee[],
   dimension: 'department' | 'position' | 'full_name',
+  rangeStart: string,
+  rangeEnd: string,
 ) {
   const counts = new Map<string, number>()
   occurrences
     .filter((o) => ABSENCE_TYPES.includes(o.type))
     .forEach((o) => {
+      const days = overlappingDays(o.occurrence_date, o.end_date, rangeStart, rangeEnd).length
+      if (days === 0) return
       const key = o.employees[dimension]
-      counts.set(key, (counts.get(key) ?? 0) + 1)
+      counts.set(key, (counts.get(key) ?? 0) + days)
     })
   return Array.from(counts.entries())
     .map(([name, total]) => ({ name, total }))
     .sort((a, b) => b.total - a.total)
 }
 
-export function groupByCostCenter(occurrences: OccurrenceWithEmployee[], costCenters: CostCenter[]) {
+export function groupByCostCenter(
+  occurrences: OccurrenceWithEmployee[],
+  costCenters: CostCenter[],
+  rangeStart: string,
+  rangeEnd: string,
+) {
   const counts = new Map<string, number>()
   occurrences
     .filter((o) => ABSENCE_TYPES.includes(o.type))
     .forEach((o) => {
+      const days = overlappingDays(o.occurrence_date, o.end_date, rangeStart, rangeEnd).length
+      if (days === 0) return
       const key = o.employees.cost_center_id
-      counts.set(key, (counts.get(key) ?? 0) + 1)
+      counts.set(key, (counts.get(key) ?? 0) + days)
     })
   return Array.from(counts.entries())
     .map(([costCenterId, total]) => ({
@@ -78,8 +111,10 @@ export function groupOverTime(occurrences: OccurrenceWithEmployee[], startDate: 
   occurrences
     .filter((o) => ABSENCE_TYPES.includes(o.type))
     .forEach((o) => {
-      const key = bucketKey(dayjs(o.occurrence_date))
-      buckets.set(key, (buckets.get(key) ?? 0) + 1)
+      overlappingDays(o.occurrence_date, o.end_date, startDate, endDate).forEach((day) => {
+        const key = bucketKey(dayjs(day))
+        buckets.set(key, (buckets.get(key) ?? 0) + 1)
+      })
     })
 
   return Array.from(buckets.entries()).map(([label, total]) => ({ label, total }))
