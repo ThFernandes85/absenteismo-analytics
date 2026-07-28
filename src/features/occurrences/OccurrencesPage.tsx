@@ -9,30 +9,37 @@ import { formatDate, formatDateTime } from '@/lib/utils'
 import { OCCURRENCE_COLORS, OCCURRENCE_ICONS, OCCURRENCE_LABELS } from '@/lib/constants'
 import { useEmployees } from '@/features/employees/api'
 import { PendingAttendanceCard } from '@/features/dashboard/PendingAttendanceCard'
-import { useActiveLeaveToday, useDeleteOccurrence, useOccurrencesByDateRange } from './api'
+import { PeriodFilter } from '@/features/dashboard/PeriodFilter'
+import { PERIOD_LABELS, resolvePeriod, type PeriodPreset } from '@/features/dashboard/periods'
+import { useActiveLeaveToday, useDeleteOccurrence, useOccurrencesByDate, useOccurrencesByDateRange } from './api'
 import { OccurrenceForm } from './OccurrenceForm'
 import { AttachmentList } from './AttachmentList'
 
 export function OccurrencesPage() {
   const { data: allEmployees, isLoading: loadingEmployees } = useEmployees('all')
   const employees = allEmployees?.filter((e) => e.status !== 'inativo')
-  const startDate = dayjs().subtract(30, 'day').format('YYYY-MM-DD')
-  const endDate = dayjs().format('YYYY-MM-DD')
-  const today = endDate
-  const { data: recentOccurrences, isLoading: loadingOccurrences } = useOccurrencesByDateRange(startDate, endDate)
+
+  const [preset, setPreset] = useState<PeriodPreset>('30dias')
+  const [customStart, setCustomStart] = useState(dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
+  const [customEnd, setCustomEnd] = useState(dayjs().format('YYYY-MM-DD'))
+  const { start, end } = resolvePeriod(preset, customStart, customEnd)
+
+  const today = dayjs().format('YYYY-MM-DD')
+  const { data: recentOccurrences, isLoading: loadingOccurrences } = useOccurrencesByDateRange(start, end)
+  // Independente do período escolhido para a listagem: pendências de hoje
+  // sempre olham para hoje, não para o filtro selecionado.
+  const { data: todayOccurrences } = useOccurrencesByDate(today)
   const { data: activeLeaveToday } = useActiveLeaveToday()
   const deleteOccurrence = useDeleteOccurrence()
   const [prefillEmployeeId, setPrefillEmployeeId] = useState<string>()
 
   const pendingEmployees = useMemo(() => {
-    const loggedTodayIds = new Set(
-      (recentOccurrences ?? []).filter((o) => o.occurrence_date === today).map((o) => o.employee_id),
-    )
+    const loggedTodayIds = new Set((todayOccurrences ?? []).map((o) => o.employee_id))
     const onLeaveIds = new Set((activeLeaveToday ?? []).map((o) => o.employee_id))
     return (allEmployees ?? []).filter(
       (e) => e.status === 'ativo' && !loggedTodayIds.has(e.id) && !onLeaveIds.has(e.id),
     )
-  }, [allEmployees, recentOccurrences, activeLeaveToday, today])
+  }, [allEmployees, todayOccurrences, activeLeaveToday])
 
   async function handleDelete(id: string) {
     if (!confirm('Remover este lançamento?')) return
@@ -72,9 +79,19 @@ export function OccurrencesPage() {
 
         <Card className="col-span-2">
           <CardHeader>
-            <CardTitle>Lançamentos dos Últimos 30 Dias</CardTitle>
+            <CardTitle>Lançamentos — {PERIOD_LABELS[preset]}</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-4">
+              <PeriodFilter
+                preset={preset}
+                onPresetChange={setPreset}
+                customStart={customStart}
+                customEnd={customEnd}
+                onCustomStartChange={setCustomStart}
+                onCustomEndChange={setCustomEnd}
+              />
+            </div>
             {loadingOccurrences ? (
               <FullPageSpinner />
             ) : (
@@ -114,7 +131,7 @@ export function OccurrencesPage() {
                 ))}
                 {recentOccurrences?.length === 0 && (
                   <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">
-                    Nenhum lançamento nos últimos 30 dias.
+                    Nenhum lançamento no período selecionado.
                   </p>
                 )}
               </ul>
