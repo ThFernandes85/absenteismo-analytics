@@ -96,7 +96,13 @@ export interface CompanySettings {
   id: number
   average_daily_cost: number
   target_absenteeism_rate: number
-  overtime_hour_rate: number
+  updated_by: string | null
+  updated_at: string
+}
+
+export interface PositionOvertimeRate {
+  position: string
+  hourly_rate: number
   updated_by: string | null
   updated_at: string
 }

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { formatCurrency } from '@/lib/utils'
 import { useOccurrencesByDateRange } from '@/features/occurrences/api'
-import { useCompanySettings } from '@/features/admin/settingsApi'
+import { usePositionOvertimeRates } from './ratesApi'
 import { PeriodFilter } from '@/features/dashboard/PeriodFilter'
 import { PERIOD_LABELS, resolvePeriod, type PeriodPreset } from '@/features/dashboard/periods'
 import type { OvertimePercentage } from '@/types/database.types'
@@ -21,8 +22,13 @@ export function OvertimePage() {
   const { start, end } = resolvePeriod(preset, customStart, customEnd)
 
   const { data: occurrences, isLoading: loadingOccurrences } = useOccurrencesByDateRange(start, end)
-  const { data: settings, isLoading: loadingSettings } = useCompanySettings()
-  const rate = settings?.overtime_hour_rate ?? 0
+  const { data: rates, isLoading: loadingRates } = usePositionOvertimeRates()
+
+  const rateByPosition = useMemo(() => {
+    const map = new Map<string, number>()
+    rates?.forEach((r) => map.set(r.position, r.hourly_rate))
+    return map
+  }, [rates])
 
   const overtimeLaunches = useMemo(
     () => (occurrences ?? []).filter((o) => o.type === 'hora_extra'),
@@ -30,24 +36,31 @@ export function OvertimePage() {
   )
 
   const byEmployee = useMemo(() => {
-    const map = new Map<string, { name: string; hours: number; value: number; launches: number }>()
+    const map = new Map<
+      string,
+      { name: string; position: string; hours: number; value: number; launches: number; rate: number }
+    >()
     overtimeLaunches.forEach((o) => {
       const hours = o.hours ?? 0
+      const rate = rateByPosition.get(o.employees.position) ?? 0
       const multiplier = o.overtime_percentage ? PERCENTAGE_MULTIPLIER[o.overtime_percentage] : 1
       const value = hours * rate * multiplier
-      const entry = map.get(o.employee_id) ?? { name: o.employees.full_name, hours: 0, value: 0, launches: 0 }
+      const entry =
+        map.get(o.employee_id) ??
+        { name: o.employees.full_name, position: o.employees.position, hours: 0, value: 0, launches: 0, rate }
       entry.hours += hours
       entry.value += value
       entry.launches += 1
       map.set(o.employee_id, entry)
     })
     return Array.from(map.values()).sort((a, b) => b.hours - a.hours)
-  }, [overtimeLaunches, rate])
+  }, [overtimeLaunches, rateByPosition])
 
   const totalHours = byEmployee.reduce((sum, e) => sum + e.hours, 0)
   const totalValue = byEmployee.reduce((sum, e) => sum + e.value, 0)
+  const missingRate = byEmployee.some((e) => e.rate === 0)
 
-  const isLoading = loadingOccurrences || loadingSettings
+  const isLoading = loadingOccurrences || loadingRates
 
   return (
     <div className="space-y-6">
@@ -96,9 +109,13 @@ export function OvertimePage() {
                 <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(totalValue)}
                 </p>
-                {rate === 0 && (
+                {missingRate && (
                   <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                    Configure o valor da hora extra em Configurações para ver o saldo em R$.
+                    Alguns cargos ainda não têm valor de hora extra configurado em{' '}
+                    <Link to="/configuracoes" className="underline">
+                      Configurações
+                    </Link>
+                    .
                   </p>
                 )}
               </CardContent>
@@ -120,6 +137,7 @@ export function OvertimePage() {
                     <thead>
                       <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-text-muted)]">
                         <th className="py-2 font-medium">Colaborador</th>
+                        <th className="py-2 font-medium">Função</th>
                         <th className="py-2 font-medium">Lançamentos</th>
                         <th className="py-2 font-medium">Total de Horas</th>
                         <th className="py-2 font-medium">Valor (R$)</th>
@@ -129,15 +147,24 @@ export function OvertimePage() {
                       {byEmployee.map((e) => (
                         <tr key={e.name} className="border-b border-[var(--color-border)] last:border-0">
                           <td className="py-2 font-medium">{e.name}</td>
+                          <td className="py-2 text-[var(--color-text-muted)]">{e.position}</td>
                           <td className="py-2 text-[var(--color-text-muted)]">{e.launches}</td>
                           <td className="py-2">{e.hours.toFixed(1)}h</td>
-                          <td className="py-2">{formatCurrency(e.value)}</td>
+                          <td className="py-2">
+                            {formatCurrency(e.value)}
+                            {e.rate === 0 && (
+                              <span className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">
+                                (sem valor de hora configurado)
+                              </span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
                       <tr className="border-t border-[var(--color-border)] font-semibold">
                         <td className="py-2">Total</td>
+                        <td className="py-2" />
                         <td className="py-2" />
                         <td className="py-2">{totalHours.toFixed(1)}h</td>
                         <td className="py-2">{formatCurrency(totalValue)}</td>

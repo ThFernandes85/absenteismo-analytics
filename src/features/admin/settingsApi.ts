@@ -20,11 +20,7 @@ export function useUpdateCompanySettings() {
   const queryClient = useQueryClient()
   const { profile } = useAuth()
   return useMutation({
-    mutationFn: async (input: {
-      average_daily_cost: number
-      target_absenteeism_rate: number
-      overtime_hour_rate: number
-    }) => {
+    mutationFn: async (input: { average_daily_cost: number; target_absenteeism_rate: number }) => {
       const { error } = await supabase
         .from('company_settings')
         .update({ ...input, updated_by: profile?.id })
