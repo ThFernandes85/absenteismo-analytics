@@ -102,7 +102,8 @@ export interface CompanySettings {
 
 export interface PositionOvertimeRate {
   position: string
-  hourly_rate: number
+  rate_50: number
+  rate_100: number
   updated_by: string | null
   updated_at: string
 }

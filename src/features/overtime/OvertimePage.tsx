@@ -8,12 +8,6 @@ import { useOccurrencesByDateRange } from '@/features/occurrences/api'
 import { usePositionOvertimeRates } from './ratesApi'
 import { PeriodFilter } from '@/features/dashboard/PeriodFilter'
 import { PERIOD_LABELS, resolvePeriod, type PeriodPreset } from '@/features/dashboard/periods'
-import type { OvertimePercentage } from '@/types/database.types'
-
-const PERCENTAGE_MULTIPLIER: Record<OvertimePercentage, number> = {
-  '50': 1.5,
-  '100': 2,
-}
 
 export function OvertimePage() {
   const [preset, setPreset] = useState<PeriodPreset>('mes')
@@ -25,8 +19,8 @@ export function OvertimePage() {
   const { data: rates, isLoading: loadingRates } = usePositionOvertimeRates()
 
   const rateByPosition = useMemo(() => {
-    const map = new Map<string, number>()
-    rates?.forEach((r) => map.set(r.position, r.hourly_rate))
+    const map = new Map<string, { rate_50: number; rate_100: number }>()
+    rates?.forEach((r) => map.set(r.position, { rate_50: r.rate_50, rate_100: r.rate_100 }))
     return map
   }, [rates])
 
@@ -38,19 +32,20 @@ export function OvertimePage() {
   const byEmployee = useMemo(() => {
     const map = new Map<
       string,
-      { name: string; position: string; hours: number; value: number; launches: number; rate: number }
+      { name: string; position: string; hours: number; value: number; launches: number; missingRate: boolean }
     >()
     overtimeLaunches.forEach((o) => {
       const hours = o.hours ?? 0
-      const rate = rateByPosition.get(o.employees.position) ?? 0
-      const multiplier = o.overtime_percentage ? PERCENTAGE_MULTIPLIER[o.overtime_percentage] : 1
-      const value = hours * rate * multiplier
+      const positionRates = rateByPosition.get(o.employees.position)
+      const rate = o.overtime_percentage === '100' ? positionRates?.rate_100 ?? 0 : positionRates?.rate_50 ?? 0
+      const value = hours * rate
       const entry =
         map.get(o.employee_id) ??
-        { name: o.employees.full_name, position: o.employees.position, hours: 0, value: 0, launches: 0, rate }
+        { name: o.employees.full_name, position: o.employees.position, hours: 0, value: 0, launches: 0, missingRate: false }
       entry.hours += hours
       entry.value += value
       entry.launches += 1
+      if (rate === 0) entry.missingRate = true
       map.set(o.employee_id, entry)
     })
     return Array.from(map.values()).sort((a, b) => b.hours - a.hours)
@@ -58,7 +53,7 @@ export function OvertimePage() {
 
   const totalHours = byEmployee.reduce((sum, e) => sum + e.hours, 0)
   const totalValue = byEmployee.reduce((sum, e) => sum + e.value, 0)
-  const missingRate = byEmployee.some((e) => e.rate === 0)
+  const missingRate = byEmployee.some((e) => e.missingRate)
 
   const isLoading = loadingOccurrences || loadingRates
 
@@ -152,7 +147,7 @@ export function OvertimePage() {
                           <td className="py-2">{e.hours.toFixed(1)}h</td>
                           <td className="py-2">
                             {formatCurrency(e.value)}
-                            {e.rate === 0 && (
+                            {e.missingRate && (
                               <span className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">
                                 (sem valor de hora configurado)
                               </span>

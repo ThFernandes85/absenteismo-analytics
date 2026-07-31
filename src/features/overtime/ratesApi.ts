@@ -20,10 +20,18 @@ export function useSetPositionOvertimeRate() {
   const queryClient = useQueryClient()
   const { profile } = useAuth()
   return useMutation({
-    mutationFn: async ({ position, hourly_rate }: { position: string; hourly_rate: number }) => {
+    mutationFn: async ({
+      position,
+      rate_50,
+      rate_100,
+    }: {
+      position: string
+      rate_50: number
+      rate_100: number
+    }) => {
       const { error } = await supabase
         .from('position_overtime_rates')
-        .upsert({ position, hourly_rate, updated_by: profile?.id }, { onConflict: 'position' })
+        .upsert({ position, rate_50, rate_100, updated_by: profile?.id }, { onConflict: 'position' })
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: RATES_KEY }),
