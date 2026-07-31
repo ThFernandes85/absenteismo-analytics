@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { FullPageSpinner } from '@/components/ui/Spinner'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import { useOccurrencesByDateRange } from '@/features/occurrences/api'
 import { usePositionOvertimeRates } from './ratesApi'
 import { PeriodFilter } from '@/features/dashboard/PeriodFilter'
@@ -54,6 +54,24 @@ export function OvertimePage() {
   const totalHours = byEmployee.reduce((sum, e) => sum + e.hours, 0)
   const totalValue = byEmployee.reduce((sum, e) => sum + e.value, 0)
   const missingRate = byEmployee.some((e) => e.missingRate)
+
+  const launchDetails = useMemo(() => {
+    return overtimeLaunches
+      .map((o) => {
+        const hours = o.hours ?? 0
+        const positionRates = rateByPosition.get(o.employees.position)
+        const rate = o.overtime_percentage === '100' ? positionRates?.rate_100 ?? 0 : positionRates?.rate_50 ?? 0
+        return {
+          id: o.id,
+          date: o.occurrence_date,
+          name: o.employees.full_name,
+          percentage: o.overtime_percentage,
+          hours,
+          value: hours * rate,
+        }
+      })
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+  }, [overtimeLaunches, rateByPosition])
 
   const isLoading = loadingOccurrences || loadingRates
 
@@ -165,6 +183,46 @@ export function OvertimePage() {
                         <td className="py-2">{formatCurrency(totalValue)}</td>
                       </tr>
                     </tfoot>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Lançamentos de Hora Extra — {PERIOD_LABELS[preset]}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {launchDetails.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">
+                  Nenhuma hora extra lançada no período selecionado.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-text-muted)]">
+                        <th className="py-2 font-medium">Data</th>
+                        <th className="py-2 font-medium">Colaborador</th>
+                        <th className="py-2 font-medium">Percentual</th>
+                        <th className="py-2 font-medium">Horas</th>
+                        <th className="py-2 font-medium">Valor (R$)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {launchDetails.map((l) => (
+                        <tr key={l.id} className="border-b border-[var(--color-border)] last:border-0">
+                          <td className="py-2">{formatDate(l.date)}</td>
+                          <td className="py-2 font-medium">{l.name}</td>
+                          <td className="py-2 text-[var(--color-text-muted)]">
+                            {l.percentage ? `${l.percentage}%` : '—'}
+                          </td>
+                          <td className="py-2">{l.hours.toFixed(1)}h</td>
+                          <td className="py-2">{formatCurrency(l.value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
                   </table>
                 </div>
               )}
