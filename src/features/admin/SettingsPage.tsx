@@ -16,6 +16,9 @@ const schema = z.object({
   target_absenteeism_rate: z
     .string()
     .refine((v) => Number(v) >= 0 && Number(v) <= 100, 'Informe um valor entre 0 e 100'),
+  overtime_hour_rate: z
+    .string()
+    .refine((v) => Number(v) >= 0, 'Informe um valor válido'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -35,6 +38,7 @@ export function SettingsPage() {
       reset({
         average_daily_cost: String(settings.average_daily_cost),
         target_absenteeism_rate: String(settings.target_absenteeism_rate),
+        overtime_hour_rate: String(settings.overtime_hour_rate),
       })
     }
   }, [settings, reset])
@@ -46,6 +50,7 @@ export function SettingsPage() {
       await updateSettings.mutateAsync({
         average_daily_cost: Number(values.average_daily_cost),
         target_absenteeism_rate: Number(values.target_absenteeism_rate),
+        overtime_hour_rate: Number(values.overtime_hour_rate),
       })
       toast.success('Configurações salvas.')
     } catch {
@@ -88,6 +93,21 @@ export function SettingsPage() {
               <FieldError message={errors.target_absenteeism_rate?.message} />
               <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">
                 Referência usada para sinalizar unidades "Crítico"/"Atenção"/"Sob controle" no Painel Executivo.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="overtime_hour_rate">Valor da hora extra (R$)</Label>
+              <Input
+                id="overtime_hour_rate"
+                type="number"
+                step="0.01"
+                min="0"
+                {...register('overtime_hour_rate')}
+              />
+              <FieldError message={errors.overtime_hour_rate?.message} />
+              <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">
+                Valor-base da hora extra, usado no relatório de Horas Extras. O adicional de 50% ou 100% lançado em
+                cada ocorrência é aplicado sobre este valor.
               </p>
             </div>
             <Button type="submit" disabled={isSubmitting}>

@@ -21,3 +21,7 @@ export function formatDateTime(dateStr: string | null | undefined) {
     minute: '2-digit',
   })
 }
+
+export function formatCurrency(value: number) {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}

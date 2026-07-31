@@ -10,6 +10,7 @@ import {
   Landmark,
   Settings,
   LineChart,
+  Clock,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/funcionarios', label: 'Funcionários', icon: Users },
   { to: '/ocorrencias', label: 'Ocorrências', icon: ClipboardList },
+  { to: '/horas-extras', label: 'Horas Extras', icon: Clock },
   { to: '/calendario', label: 'Calendário', icon: CalendarDays },
 ]
 

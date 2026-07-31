@@ -12,6 +12,7 @@ import { EmployeesPage } from '@/features/employees/EmployeesPage'
 import { HiddenEmployeesPage } from '@/features/employees/HiddenEmployeesPage'
 import { EmployeeDetailPage } from '@/features/employees/EmployeeDetailPage'
 import { OccurrencesPage } from '@/features/occurrences/OccurrencesPage'
+import { OvertimePage } from '@/features/overtime/OvertimePage'
 import { CalendarPage } from '@/features/calendar/CalendarPage'
 import { AuditPage } from '@/features/audit/AuditPage'
 import { UsersPage } from '@/features/admin/UsersPage'
@@ -36,6 +37,7 @@ export default function App() {
                     <Route path="funcionarios/ocultos" element={<HiddenEmployeesPage />} />
                     <Route path="funcionarios/:id" element={<EmployeeDetailPage />} />
                     <Route path="ocorrencias" element={<OccurrencesPage />} />
+                    <Route path="horas-extras" element={<OvertimePage />} />
                     <Route path="calendario" element={<CalendarPage />} />
                   </Route>
                   <Route element={<ExecutiveRoute />}>
