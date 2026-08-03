@@ -62,11 +62,22 @@ export function MeasureFormModal({
         description: values.description,
         suspension_days: values.type === 'suspensao' ? Number(values.suspension_days) : null,
       })
-      toast.success('Medida administrativa registrada.')
+      toast.success(
+        values.type === 'suspensao'
+          ? `Suspensão registrada. ${values.suspension_days} dia(s) de falta lançados automaticamente.`
+          : 'Medida administrativa registrada.',
+      )
       reset()
       onClose()
-    } catch {
-      toast.error('Erro ao registrar medida administrativa.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : ''
+      if (message.includes('occurrences_no_overlap') || message.includes('exclusion') || message.includes('duplicate')) {
+        toast.error(
+          'Já existe um lançamento (presença, falta, atestado, férias etc.) para o colaborador em um dos dias da suspensão. Verifique o histórico antes de tentar novamente.',
+        )
+      } else {
+        toast.error('Erro ao registrar medida administrativa.')
+      }
     }
   }
 
