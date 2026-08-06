@@ -15,9 +15,9 @@ import { supabase } from '@/lib/supabase'
 import { useCreateOccurrence, useUploadAttachment } from './api'
 import type { Employee, OccurrenceType } from '@/types/database.types'
 
-const RANGE_TYPES: OccurrenceType[] = ['atestado', 'ferias']
+export const RANGE_TYPES: OccurrenceType[] = ['atestado', 'ferias']
 
-const schema = z
+export const schema = z
   .object({
     employee_id: z.string().min(1, 'Selecione o funcionário'),
     type: z.custom<OccurrenceType>((v) => typeof v === 'string' && v in OCCURRENCE_LABELS),
@@ -58,7 +58,7 @@ const schema = z
     }
   })
 
-type FormValues = z.infer<typeof schema>
+export type FormValues = z.infer<typeof schema>
 
 export function OccurrenceForm({
   employees,

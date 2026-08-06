@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import dayjs from 'dayjs'
-import { ArrowLeft, Gavel, Plus } from 'lucide-react'
+import { ArrowLeft, Gavel, Pencil, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -17,6 +17,7 @@ import {
 } from '@/lib/constants'
 import { useEmployee } from './api'
 import { useEmployeeOccurrences } from '@/features/occurrences/api'
+import { EditOccurrenceModal } from '@/features/occurrences/EditOccurrenceModal'
 import { useEmployeeMeasures } from './measuresApi'
 import { MeasureFormModal } from './MeasureFormModal'
 import type { AdministrativeMeasure, Occurrence } from '@/types/database.types'
@@ -31,6 +32,7 @@ export function EmployeeDetailPage() {
   const { data: occurrences, isLoading: loadingOccurrences } = useEmployeeOccurrences(id)
   const { data: measures, isLoading: loadingMeasures } = useEmployeeMeasures(id)
   const [measureModalOpen, setMeasureModalOpen] = useState(false)
+  const [editingOccurrence, setEditingOccurrence] = useState<Occurrence | null>(null)
 
   const timeline = useMemo<TimelineItem[]>(() => {
     const items: TimelineItem[] = []
@@ -122,6 +124,13 @@ export function EmployeeDetailPage() {
                         Lançado em {formatDateTime(item.data.created_at)}
                       </p>
                     </div>
+                    <button
+                      onClick={() => setEditingOccurrence(item.data)}
+                      className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] cursor-pointer"
+                      title="Editar"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                   </li>
                 ) : (
                   <li key={`measure-${item.data.id}`} className="flex items-start gap-3">
@@ -151,6 +160,12 @@ export function EmployeeDetailPage() {
       </div>
 
       <MeasureFormModal open={measureModalOpen} onClose={() => setMeasureModalOpen(false)} employeeId={employee.id} />
+      <EditOccurrenceModal
+        occurrence={editingOccurrence}
+        employeeName={employee.full_name}
+        open={!!editingOccurrence}
+        onClose={() => setEditingOccurrence(null)}
+      />
     </div>
   )
 }

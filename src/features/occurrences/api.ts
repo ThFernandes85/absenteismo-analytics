@@ -109,6 +109,17 @@ export function useCreateOccurrence() {
   })
 }
 
+export function useUpdateOccurrence() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: OccurrenceInput }) => {
+      const { error } = await supabase.from('occurrences').update(input).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: OCCURRENCES_KEY }),
+  })
+}
+
 export function useDeleteOccurrence() {
   const queryClient = useQueryClient()
   return useMutation({
