@@ -1,15 +1,17 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import dayjs from 'dayjs'
 import toast from 'react-hot-toast'
+import { Paperclip } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input, Label, FieldError } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { OCCURRENCE_LABELS } from '@/lib/constants'
-import { useUpdateOccurrence } from './api'
+import { useUpdateOccurrence, useUploadAttachment } from './api'
+import { AttachmentList } from './AttachmentList'
 import { schema, RANGE_TYPES, type FormValues } from './OccurrenceForm'
 import type { Occurrence, OccurrenceType } from '@/types/database.types'
 
@@ -25,6 +27,8 @@ export function EditOccurrenceModal({
   onClose: () => void
 }) {
   const updateOccurrence = useUpdateOccurrence()
+  const uploadAttachment = useUploadAttachment()
+  const [file, setFile] = useState<File | null>(null)
   const {
     register,
     handleSubmit,
@@ -36,6 +40,7 @@ export function EditOccurrenceModal({
 
   useEffect(() => {
     if (!occurrence) return
+    setFile(null)
     reset({
       employee_id: occurrence.employee_id,
       type: occurrence.type,
@@ -83,7 +88,13 @@ export function EditOccurrenceModal({
           overtime_percentage: values.type === 'hora_extra' ? values.overtime_percentage ?? null : null,
         },
       })
+
+      if (file && (values.type === 'atestado' || values.type === 'declaracao')) {
+        await uploadAttachment.mutateAsync({ occurrenceId: occurrence.id, file })
+      }
+
       toast.success('Ocorrência atualizada com sucesso.')
+      setFile(null)
       onClose()
     } catch (err) {
       const message = err instanceof Error ? err.message : ''
@@ -166,6 +177,23 @@ export function EditOccurrenceModal({
             <Label htmlFor="edit_time_of_day">Horário</Label>
             <Input id="edit_time_of_day" type="time" {...register('time_of_day')} />
             <FieldError message={errors.time_of_day?.message} />
+          </div>
+        )}
+
+        {(type === 'atestado' || type === 'declaracao') && (
+          <div>
+            <Label>Anexo (PDF, PNG, JPG, JPEG)</Label>
+            <AttachmentList occurrenceId={occurrence.id} />
+            <label className="mt-2 flex h-9 cursor-pointer items-center gap-2 rounded-md border border-dashed border-[var(--color-border)] px-3 text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]">
+              <Paperclip className="h-4 w-4" />
+              {file ? file.name : 'Selecionar arquivo…'}
+              <input
+                type="file"
+                accept="application/pdf,image/png,image/jpeg"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
           </div>
         )}
 
