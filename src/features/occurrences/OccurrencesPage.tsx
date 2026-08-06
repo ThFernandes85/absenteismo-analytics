@@ -14,6 +14,7 @@ import { PERIOD_LABELS, resolvePeriod, type PeriodPreset } from '@/features/dash
 import { useActiveLeaveToday, useDeleteOccurrence, useOccurrencesByDate, useOccurrencesByDateRange } from './api'
 import { OccurrenceForm } from './OccurrenceForm'
 import { AttachmentList } from './AttachmentList'
+import { DailyAttendanceCard } from './DailyAttendanceCard'
 
 export function OccurrencesPage() {
   const { data: allEmployees, isLoading: loadingEmployees } = useEmployees('all')
@@ -66,6 +67,8 @@ export function OccurrencesPage() {
         pendingEmployees={pendingEmployees}
         onSelectEmployee={(e) => setPrefillEmployeeId(e.id)}
       />
+
+      <DailyAttendanceCard />
 
       <div className="grid grid-cols-3 gap-6">
         <Card className="col-span-1 h-fit">
