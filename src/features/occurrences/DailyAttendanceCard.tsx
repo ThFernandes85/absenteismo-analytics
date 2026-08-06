@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
+import { ChevronDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input, Label } from '@/components/ui/Input'
 import { ExportMenu } from '@/components/ui/ExportMenu'
@@ -26,6 +27,7 @@ function statusDetail(o: Occurrence) {
 }
 
 export function DailyAttendanceCard() {
+  const [expanded, setExpanded] = useState(false)
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'))
   const { data: employees, isLoading: loadingEmployees } = useEmployees('ativo')
   const { data: costCenters } = useCostCenters()
@@ -69,7 +71,15 @@ export function DailyAttendanceCard() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Lista de Presença do Dia</CardTitle>
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1.5 text-left cursor-pointer"
+        >
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform ${expanded ? '' : '-rotate-90'}`}
+          />
+          <CardTitle>Lista de Presença do Dia</CardTitle>
+        </button>
         <div className="flex items-center gap-3">
           <div>
             <Label htmlFor="attendance_date" className="sr-only">
@@ -105,6 +115,7 @@ export function DailyAttendanceCard() {
           />
         </div>
       </CardHeader>
+      {expanded && (
       <CardContent>
         {isLoading ? (
           <FullPageSpinner />
@@ -150,6 +161,7 @@ export function DailyAttendanceCard() {
           </div>
         )}
       </CardContent>
+      )}
     </Card>
   )
 }
