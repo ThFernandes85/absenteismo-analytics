@@ -42,8 +42,11 @@ const EXEC_THEME = {
   '--exec-orange': '#e8734a',
 } as CSSProperties
 
+// Ordem cronológica crescente: índice 0 é o mês mais antigo, o último é o
+// mês atual. rangeStart/rangeEnd e o valor padrão de selectedMonth abaixo
+// dependem dessa ordem.
 function buildMonthOptions() {
-  return Array.from({ length: 6 }, (_, i) => dayjs().subtract(5 - i, 'month').format('YYYY-MM')).reverse()
+  return Array.from({ length: 6 }, (_, i) => dayjs().subtract(5 - i, 'month').format('YYYY-MM'))
 }
 
 export function ExecutiveDashboardPage() {
