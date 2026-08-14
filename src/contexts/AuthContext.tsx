@@ -8,8 +8,11 @@ interface AuthContextValue {
   profile: Profile | null
   loading: boolean
   role: UserRole | null
+  passwordRecovery: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  updatePassword: (password: string) => Promise<{ error: string | null }>
+  clearPasswordRecovery: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -18,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   async function loadProfile(userId: string) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
@@ -34,8 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession)
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
       if (newSession) {
         loadProfile(newSession.user.id)
       } else {
@@ -55,8 +60,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  async function updatePassword(password: string) {
+    const { error } = await supabase.auth.updateUser({ password })
+    return { error: error?.message ?? null }
+  }
+
+  function clearPasswordRecovery() {
+    setPasswordRecovery(false)
+  }
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading, role: profile?.role ?? null, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        profile,
+        loading,
+        role: profile?.role ?? null,
+        passwordRecovery,
+        signIn,
+        signOut,
+        updatePassword,
+        clearPasswordRecovery,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
