@@ -14,6 +14,7 @@ import {
   MEASURE_LABELS,
   EMPLOYEE_STATUS_COLORS,
   EMPLOYEE_STATUS_LABELS,
+  SCHEDULE_TYPE_LABELS,
 } from '@/lib/constants'
 import { useEmployee } from './api'
 import { useEmployeeOccurrences } from '@/features/occurrences/api'
@@ -91,6 +92,17 @@ export function EmployeeDetailPage() {
             <DataRow label="Cargo" value={employee.position} />
             <DataRow label="Setor" value={employee.department} />
             <DataRow label="Data de Admissão" value={formatDate(employee.admission_date)} />
+            <DataRow label="Escala de Trabalho" value={SCHEDULE_TYPE_LABELS[employee.schedule_type]} />
+            {employee.schedule_type === 'escala_3x3' && (
+              <DataRow
+                label="Referência da Escala"
+                value={
+                  employee.schedule_reference_date
+                    ? `${formatDate(employee.schedule_reference_date)} era dia de trabalho`
+                    : '—'
+                }
+              />
+            )}
             <DataRow label="Observações" value={employee.notes || '—'} />
           </CardContent>
         </Card>

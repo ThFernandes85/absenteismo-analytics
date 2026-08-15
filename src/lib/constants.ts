@@ -1,4 +1,4 @@
-import type { EmployeeStatus, MeasureType, OccurrenceType, UserRole } from '@/types/database.types'
+import type { EmployeeScheduleType, EmployeeStatus, MeasureType, OccurrenceType, UserRole } from '@/types/database.types'
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin_master: 'Admin Master',
@@ -44,6 +44,11 @@ export const EMPLOYEE_STATUS_COLORS: Record<EmployeeStatus, string> = {
   ativo: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
   afastado: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400',
   inativo: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
+}
+
+export const SCHEDULE_TYPE_LABELS: Record<EmployeeScheduleType, string> = {
+  padrao: 'Padrão (seg-sex)',
+  escala_3x3: 'Escala 3x3 (3 dias trabalho, 3 folga)',
 }
 
 export const MEASURE_LABELS: Record<MeasureType, string> = {

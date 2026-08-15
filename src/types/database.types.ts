@@ -1,5 +1,6 @@
 export type UserRole = 'admin_master' | 'gerente_unidade' | 'assistente_administrativo' | 'diretoria'
 export type EmployeeStatus = 'ativo' | 'inativo' | 'afastado'
+export type EmployeeScheduleType = 'padrao' | 'escala_3x3'
 export type OccurrenceType = 'presenca' | 'falta' | 'atestado' | 'declaracao' | 'hora_extra' | 'ferias'
 export type OvertimePercentage = '50' | '100'
 export type MeasureType = 'termo_orientacao' | 'advertencia' | 'suspensao'
@@ -30,6 +31,8 @@ export interface Employee {
   cost_center_id: string
   admission_date: string
   status: EmployeeStatus
+  schedule_type: EmployeeScheduleType
+  schedule_reference_date: string | null
   notes: string | null
   deactivation_reason: string | null
   created_by: string | null

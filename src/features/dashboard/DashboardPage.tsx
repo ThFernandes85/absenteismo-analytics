@@ -23,6 +23,7 @@ import { FullPageSpinner } from '@/components/ui/Spinner'
 import { ExportMenu } from '@/components/ui/ExportMenu'
 import { CHART_PALETTE, OCCURRENCE_LABELS } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
+import { isScheduledWorkDay } from '@/lib/schedule'
 import { useCostCenters, useEmployees } from '@/features/employees/api'
 import { useActiveLeaveToday, useOccurrencesByDate, useOccurrencesByDateRange } from '@/features/occurrences/api'
 import { KpiCard } from './KpiCard'
@@ -78,8 +79,10 @@ export function DashboardPage() {
   const pendingEmployees = useMemo(() => {
     const loggedTodayIds = new Set((allTodayOccurrences ?? []).map((o) => o.employee_id))
     const onLeaveIds = new Set((activeLeaveToday ?? []).map((o) => o.employee_id))
-    return (activeEmployees ?? []).filter((e) => !loggedTodayIds.has(e.id) && !onLeaveIds.has(e.id))
-  }, [activeEmployees, allTodayOccurrences, activeLeaveToday])
+    return (activeEmployees ?? []).filter(
+      (e) => !loggedTodayIds.has(e.id) && !onLeaveIds.has(e.id) && isScheduledWorkDay(e, today),
+    )
+  }, [activeEmployees, allTodayOccurrences, activeLeaveToday, today])
 
   const todayCounts = useMemo(() => {
     const counts = { presenca: 0, falta: 0, atestado: 0, declaracao: 0, hora_extra: 0, ferias: 0 }

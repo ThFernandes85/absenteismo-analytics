@@ -7,6 +7,7 @@ import { ExportMenu } from '@/components/ui/ExportMenu'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { formatDate } from '@/lib/utils'
 import { OCCURRENCE_COLORS, OCCURRENCE_LABELS } from '@/lib/constants'
+import { isScheduledWorkDay } from '@/lib/schedule'
 import { useEmployees, useCostCenters } from '@/features/employees/api'
 import { useOccurrencesByDateRange } from './api'
 import type { Occurrence, OccurrenceType } from '@/types/database.types'
@@ -53,12 +54,13 @@ export function DailyAttendanceCard() {
     return (employees ?? [])
       .map((e) => {
         const occurrence = occurrenceByEmployee.get(e.id)
+        const isRestDay = !occurrence && !isScheduledWorkDay(e, date)
         return {
           matricula: e.registration_number,
           nome: e.full_name,
           cargo: e.position,
           centro_de_lucro: costCenterNames.get(e.cost_center_id) ?? '—',
-          status: occurrence ? OCCURRENCE_LABELS[occurrence.type] : 'Não lançado',
+          status: occurrence ? OCCURRENCE_LABELS[occurrence.type] : isRestDay ? 'Folga (Escala)' : 'Não lançado',
           detalhe: occurrence ? statusDetail(occurrence) : '—',
           _type: occurrence?.type as OccurrenceType | undefined,
         }

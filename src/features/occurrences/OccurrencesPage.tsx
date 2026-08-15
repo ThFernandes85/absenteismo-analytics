@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { OCCURRENCE_COLORS, OCCURRENCE_ICONS, OCCURRENCE_LABELS } from '@/lib/constants'
+import { isScheduledWorkDay } from '@/lib/schedule'
 import { useEmployees } from '@/features/employees/api'
 import { PendingAttendanceCard } from '@/features/dashboard/PendingAttendanceCard'
 import { PeriodFilter } from '@/features/dashboard/PeriodFilter'
@@ -38,9 +39,13 @@ export function OccurrencesPage() {
     const loggedTodayIds = new Set((todayOccurrences ?? []).map((o) => o.employee_id))
     const onLeaveIds = new Set((activeLeaveToday ?? []).map((o) => o.employee_id))
     return (allEmployees ?? []).filter(
-      (e) => e.status === 'ativo' && !loggedTodayIds.has(e.id) && !onLeaveIds.has(e.id),
+      (e) =>
+        e.status === 'ativo' &&
+        !loggedTodayIds.has(e.id) &&
+        !onLeaveIds.has(e.id) &&
+        isScheduledWorkDay(e, today),
     )
-  }, [allEmployees, todayOccurrences, activeLeaveToday])
+  }, [allEmployees, todayOccurrences, activeLeaveToday, today])
 
   async function handleDelete(id: string) {
     if (!confirm('Remover este lançamento?')) return

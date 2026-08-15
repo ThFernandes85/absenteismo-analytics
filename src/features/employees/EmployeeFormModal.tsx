@@ -8,18 +8,26 @@ import { Button } from '@/components/ui/Button'
 import { Input, Label, FieldError } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
+import { SCHEDULE_TYPE_LABELS } from '@/lib/constants'
 import { useCostCenters, useCreateEmployee, useUpdateEmployee, type EmployeeInput } from './api'
-import type { Employee } from '@/types/database.types'
+import type { Employee, EmployeeScheduleType } from '@/types/database.types'
 
-const schema = z.object({
-  registration_number: z.string().min(1, 'Informe a matrícula'),
-  full_name: z.string().min(2, 'Informe o nome completo'),
-  position: z.string().min(1, 'Informe o cargo'),
-  department: z.string().min(1, 'Informe o setor'),
-  cost_center_id: z.string().min(1, 'Selecione o centro de lucro'),
-  admission_date: z.string().min(1, 'Informe a data de admissão'),
-  notes: z.string().optional(),
-})
+const schema = z
+  .object({
+    registration_number: z.string().min(1, 'Informe a matrícula'),
+    full_name: z.string().min(2, 'Informe o nome completo'),
+    position: z.string().min(1, 'Informe o cargo'),
+    department: z.string().min(1, 'Informe o setor'),
+    cost_center_id: z.string().min(1, 'Selecione o centro de lucro'),
+    admission_date: z.string().min(1, 'Informe a data de admissão'),
+    schedule_type: z.custom<EmployeeScheduleType>((v) => typeof v === 'string' && v in SCHEDULE_TYPE_LABELS),
+    schedule_reference_date: z.string().optional(),
+    notes: z.string().optional(),
+  })
+  .refine((data) => data.schedule_type !== 'escala_3x3' || !!data.schedule_reference_date, {
+    message: 'Informe um dia de trabalho conhecido para calcular a escala',
+    path: ['schedule_reference_date'],
+  })
 
 type FormValues = z.infer<typeof schema>
 
@@ -37,9 +45,12 @@ export function EmployeeFormModal({ open, onClose, employee }: EmployeeFormModal
   const {
     register,
     handleSubmit,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
+
+  const scheduleType = watch('schedule_type')
 
   useEffect(() => {
     if (open) {
@@ -52,6 +63,8 @@ export function EmployeeFormModal({ open, onClose, employee }: EmployeeFormModal
               department: employee.department,
               cost_center_id: employee.cost_center_id,
               admission_date: employee.admission_date,
+              schedule_type: employee.schedule_type,
+              schedule_reference_date: employee.schedule_reference_date ?? '',
               notes: employee.notes ?? '',
             }
           : {
@@ -61,6 +74,8 @@ export function EmployeeFormModal({ open, onClose, employee }: EmployeeFormModal
               department: '',
               cost_center_id: '',
               admission_date: '',
+              schedule_type: 'padrao',
+              schedule_reference_date: '',
               notes: '',
             },
       )
@@ -68,7 +83,11 @@ export function EmployeeFormModal({ open, onClose, employee }: EmployeeFormModal
   }, [open, employee, reset])
 
   async function onSubmit(values: FormValues) {
-    const input: EmployeeInput = { ...values, notes: values.notes || null }
+    const input: EmployeeInput = {
+      ...values,
+      schedule_reference_date: values.schedule_type === 'escala_3x3' ? values.schedule_reference_date! : null,
+      notes: values.notes || null,
+    }
     try {
       if (employee) {
         await updateEmployee.mutateAsync({ id: employee.id, input })
@@ -128,6 +147,31 @@ export function EmployeeFormModal({ open, onClose, employee }: EmployeeFormModal
           </Select>
           <FieldError message={errors.cost_center_id?.message} />
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="schedule_type">Escala de Trabalho</Label>
+            <Select id="schedule_type" {...register('schedule_type')}>
+              {(Object.keys(SCHEDULE_TYPE_LABELS) as EmployeeScheduleType[]).map((t) => (
+                <option key={t} value={t}>
+                  {SCHEDULE_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </Select>
+          </div>
+          {scheduleType === 'escala_3x3' && (
+            <div>
+              <Label htmlFor="schedule_reference_date">Um Dia de Trabalho Conhecido</Label>
+              <Input id="schedule_reference_date" type="date" {...register('schedule_reference_date')} />
+              <FieldError message={errors.schedule_reference_date?.message} />
+            </div>
+          )}
+        </div>
+        {scheduleType === 'escala_3x3' && (
+          <p className="-mt-2 text-xs text-[var(--color-text-muted)]">
+            Informe qualquer data em que o colaborador estava trabalhando. O sistema calcula sozinho, a partir dela,
+            quais dias são de trabalho ou folga no ciclo de 3x3.
+          </p>
+        )}
         <div>
           <Label htmlFor="notes">Observações</Label>
           <Textarea id="notes" {...register('notes')} />

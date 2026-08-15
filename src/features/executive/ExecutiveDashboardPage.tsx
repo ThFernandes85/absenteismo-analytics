@@ -16,20 +16,14 @@ import { Building2 } from 'lucide-react'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { ExportMenu } from '@/components/ui/ExportMenu'
 import { formatDateTime } from '@/lib/utils'
+import { sumExpectedWorkDays } from '@/lib/schedule'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEmployees } from '@/features/employees/api'
 import { useOccurrencesByDateRange } from '@/features/occurrences/api'
 import { useCostCentersList } from '@/features/admin/costCentersApi'
 import { useCompanySettings } from '@/features/admin/settingsApi'
 import { ExecKpiCard } from './ExecKpiCard'
-import {
-  buildMonthlyTrend,
-  buildMotivosBreakdown,
-  buildUnitRollup,
-  calculateLostDays,
-  classifyUnit,
-  countBusinessDays,
-} from './aggregations'
+import { buildMonthlyTrend, buildMotivosBreakdown, buildUnitRollup, calculateLostDays, classifyUnit } from './aggregations'
 
 const EXEC_THEME = {
   '--exec-bg': '#f4f5f7',
@@ -71,7 +65,6 @@ export function ExecutiveDashboardPage() {
   const monthStart = dayjs(selectedMonth).startOf('month').format('YYYY-MM-DD')
   const monthEndRaw = dayjs(selectedMonth).endOf('month')
   const monthEnd = (monthEndRaw.isAfter(dayjs()) ? dayjs() : monthEndRaw).format('YYYY-MM-DD')
-  const businessDays = countBusinessDays(monthStart, monthEnd)
 
   const allEmployees = employees ?? []
   const allOccurrences = occurrences ?? []
@@ -83,13 +76,15 @@ export function ExecutiveDashboardPage() {
   )
 
   const unitRollup = useMemo(
-    () => buildUnitRollup(allCostCenters, allEmployees, monthOccurrences, businessDays),
-    [allCostCenters, allEmployees, monthOccurrences, businessDays],
+    () => buildUnitRollup(allCostCenters, allEmployees, monthOccurrences, monthStart, monthEnd),
+    [allCostCenters, allEmployees, monthOccurrences, monthStart, monthEnd],
   )
   const unitRollupRanked = [...unitRollup].sort((a, b) => b.taxa - a.taxa)
   const maxTaxa = Math.max(...unitRollup.map((u) => u.taxa), meta) * 1.05 || 1
 
   const selectedUnit = unitRollup.find((u) => u.id === selectedCostCenter)
+  const scopedEmployeesList =
+    selectedCostCenter === 'todos' ? allEmployees : allEmployees.filter((e) => e.cost_center_id === selectedCostCenter)
   const scopedEmployeesCount = selectedCostCenter === 'todos' ? allEmployees.length : (selectedUnit?.efetivo ?? 0)
   const scopedOccurrences = useMemo(
     () =>
@@ -99,7 +94,8 @@ export function ExecutiveDashboardPage() {
     [monthOccurrences, selectedCostCenter],
   )
   const diasPerdidos = calculateLostDays(scopedOccurrences)
-  const taxaGeral = scopedEmployeesCount > 0 ? (diasPerdidos / (scopedEmployeesCount * businessDays)) * 100 : 0
+  const expectedWorkDays = sumExpectedWorkDays(scopedEmployeesList, monthStart, monthEnd)
+  const taxaGeral = expectedWorkDays > 0 ? (diasPerdidos / expectedWorkDays) * 100 : 0
 
   const previousMonth = dayjs(selectedMonth).subtract(1, 'month').format('YYYY-MM')
   const previousMonthOccurrences = useMemo(

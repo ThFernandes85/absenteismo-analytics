@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { CostCenter, Employee, EmployeeStatus } from '@/types/database.types'
+import type { CostCenter, Employee, EmployeeScheduleType, EmployeeStatus } from '@/types/database.types'
 import { useAuth } from '@/contexts/AuthContext'
 
 export interface EmployeeInput {
@@ -10,6 +10,8 @@ export interface EmployeeInput {
   department: string
   cost_center_id: string
   admission_date: string
+  schedule_type: EmployeeScheduleType
+  schedule_reference_date: string | null
   notes: string | null
 }
 

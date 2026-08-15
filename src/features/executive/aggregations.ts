@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { sumExpectedWorkDays } from '@/lib/schedule'
 import type { CostCenter, Employee, Occurrence } from '@/types/database.types'
 
 type OccurrenceWithEmployee = Occurrence & {
@@ -6,18 +7,6 @@ type OccurrenceWithEmployee = Occurrence & {
 }
 
 const ABSENCE_TYPES = ['falta', 'atestado'] as const
-
-export function countBusinessDays(start: string, end: string) {
-  let cursor = dayjs(start)
-  const last = dayjs(end)
-  let count = 0
-  while (cursor.isBefore(last) || cursor.isSame(last, 'day')) {
-    const weekday = cursor.day()
-    if (weekday !== 0 && weekday !== 6) count += 1
-    cursor = cursor.add(1, 'day')
-  }
-  return Math.max(count, 1)
-}
 
 export function calculateLostDays(occurrences: Occurrence[]) {
   return occurrences.reduce((total, o) => {
@@ -41,7 +30,8 @@ export function buildUnitRollup(
   costCenters: CostCenter[],
   employees: Employee[],
   occurrences: OccurrenceWithEmployee[],
-  businessDays: number,
+  periodStart: string,
+  periodEnd: string,
 ): UnitRollup[] {
   return costCenters.map((cc) => {
     const unitEmployees = employees.filter((e) => e.cost_center_id === cc.id)
@@ -50,7 +40,8 @@ export function buildUnitRollup(
     )
     const diasPerdidos = calculateLostDays(unitOccurrences)
     const efetivo = unitEmployees.length
-    const taxa = efetivo > 0 ? (diasPerdidos / (efetivo * businessDays)) * 100 : 0
+    const expectedWorkDays = sumExpectedWorkDays(unitEmployees, periodStart, periodEnd)
+    const taxa = expectedWorkDays > 0 ? (diasPerdidos / expectedWorkDays) * 100 : 0
     return {
       id: cc.id,
       code: cc.code,
@@ -76,12 +67,11 @@ export function buildMonthlyTrend(
 ): MonthlyTrendPoint[] {
   const scopedEmployees =
     costCenterId === 'todos' ? employees : employees.filter((e) => e.cost_center_id === costCenterId)
-  const efetivo = scopedEmployees.length
 
   return months.map((month) => {
     const start = dayjs(month).startOf('month').format('YYYY-MM-DD')
     const end = dayjs(month).endOf('month').format('YYYY-MM-DD')
-    const businessDays = countBusinessDays(start, end)
+    const expectedWorkDays = sumExpectedWorkDays(scopedEmployees, start, end)
 
     const monthOccurrences = occurrences.filter((o) => {
       if (!dayjs(o.occurrence_date).isSame(month, 'month')) return false
@@ -90,7 +80,7 @@ export function buildMonthlyTrend(
     })
 
     const diasPerdidos = calculateLostDays(monthOccurrences)
-    const taxa = efetivo > 0 ? (diasPerdidos / (efetivo * businessDays)) * 100 : 0
+    const taxa = expectedWorkDays > 0 ? (diasPerdidos / expectedWorkDays) * 100 : 0
     return { label: dayjs(month).format('MMM/YY'), taxa: Number(taxa.toFixed(1)) }
   })
 }
