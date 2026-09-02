@@ -27,10 +27,17 @@ function statusDetail(o: Occurrence) {
   }
 }
 
-export function DailyAttendanceCard() {
+export function DailyAttendanceCard({ costCenterFilter = 'all' }: { costCenterFilter?: string }) {
   const [expanded, setExpanded] = useState(false)
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'))
-  const { data: employees, isLoading: loadingEmployees } = useEmployees('ativo')
+  const { data: allEmployees, isLoading: loadingEmployees } = useEmployees('ativo')
+  const employees = useMemo(
+    () =>
+      costCenterFilter === 'all'
+        ? allEmployees
+        : allEmployees?.filter((e) => e.cost_center_id === costCenterFilter),
+    [allEmployees, costCenterFilter],
+  )
   const { data: costCenters } = useCostCenters()
   const { data: occurrences, isLoading: loadingOccurrences } = useOccurrencesByDateRange(date, date)
 

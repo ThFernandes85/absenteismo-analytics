@@ -4,11 +4,13 @@ import { Link } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Label } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { OCCURRENCE_COLORS, OCCURRENCE_ICONS, OCCURRENCE_LABELS } from '@/lib/constants'
 import { isScheduledWorkDay } from '@/lib/schedule'
-import { useEmployees } from '@/features/employees/api'
+import { useCostCenters, useEmployees } from '@/features/employees/api'
 import { PendingAttendanceCard } from '@/features/dashboard/PendingAttendanceCard'
 import { PeriodFilter } from '@/features/dashboard/PeriodFilter'
 import { PERIOD_LABELS, resolvePeriod, type PeriodPreset } from '@/features/dashboard/periods'
@@ -19,7 +21,11 @@ import { DailyAttendanceCard } from './DailyAttendanceCard'
 
 export function OccurrencesPage() {
   const { data: allEmployees, isLoading: loadingEmployees } = useEmployees('all')
-  const employees = allEmployees?.filter((e) => e.status !== 'inativo')
+  const { data: costCenters } = useCostCenters()
+  const [costCenterFilter, setCostCenterFilter] = useState('all')
+  const employees = allEmployees?.filter(
+    (e) => e.status !== 'inativo' && (costCenterFilter === 'all' || e.cost_center_id === costCenterFilter),
+  )
 
   const [preset, setPreset] = useState<PeriodPreset>('30dias')
   const [customStart, setCustomStart] = useState(dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
@@ -41,11 +47,20 @@ export function OccurrencesPage() {
     return (allEmployees ?? []).filter(
       (e) =>
         e.status === 'ativo' &&
+        (costCenterFilter === 'all' || e.cost_center_id === costCenterFilter) &&
         !loggedTodayIds.has(e.id) &&
         !onLeaveIds.has(e.id) &&
         isScheduledWorkDay(e, today),
     )
-  }, [allEmployees, todayOccurrences, activeLeaveToday, today])
+  }, [allEmployees, todayOccurrences, activeLeaveToday, today, costCenterFilter])
+
+  const filteredOccurrences = useMemo(
+    () =>
+      costCenterFilter === 'all'
+        ? recentOccurrences
+        : recentOccurrences?.filter((o) => o.employees.cost_center_id === costCenterFilter),
+    [recentOccurrences, costCenterFilter],
+  )
 
   async function handleDelete(id: string) {
     if (!confirm('Remover este lançamento?')) return
@@ -61,11 +76,30 @@ export function OccurrencesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">Ocorrências</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Lance presenças, faltas, atestados, declarações e horas extras.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">Ocorrências</h1>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Lance presenças, faltas, atestados, declarações e horas extras.
+          </p>
+        </div>
+        <div className="w-64">
+          <Label htmlFor="occurrences-cost-center-filter" className="sr-only">
+            Centro de Lucro
+          </Label>
+          <Select
+            id="occurrences-cost-center-filter"
+            value={costCenterFilter}
+            onChange={(e) => setCostCenterFilter(e.target.value)}
+          >
+            <option value="all">Todos os centros de lucro</option>
+            {costCenters?.map((cc) => (
+              <option key={cc.id} value={cc.id}>
+                {cc.code} — {cc.name}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       <PendingAttendanceCard
@@ -73,7 +107,7 @@ export function OccurrencesPage() {
         onSelectEmployee={(e) => setPrefillEmployeeId(e.id)}
       />
 
-      <DailyAttendanceCard />
+      <DailyAttendanceCard costCenterFilter={costCenterFilter} />
 
       <div className="grid grid-cols-3 gap-6">
         <Card className="col-span-1 h-fit">
@@ -104,7 +138,7 @@ export function OccurrencesPage() {
               <FullPageSpinner />
             ) : (
               <ul className="space-y-3">
-                {recentOccurrences?.map((o) => (
+                {filteredOccurrences?.map((o) => (
                   <li key={o.id} className="flex items-start gap-3 border-b border-[var(--color-border)] pb-3 last:border-0">
                     <span
                       className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm ${OCCURRENCE_COLORS[o.type]}`}
@@ -137,7 +171,7 @@ export function OccurrencesPage() {
                     </button>
                   </li>
                 ))}
-                {recentOccurrences?.length === 0 && (
+                {filteredOccurrences?.length === 0 && (
                   <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">
                     Nenhum lançamento no período selecionado.
                   </p>
